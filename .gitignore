@@ -1,0 +1,5 @@
+local_env/**
+*.pyc
+
+# after running python blog/create_db.py, blog.db created
+*.db

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block css %}
+
+<style>
+ table {
+     border: 2px solid lightblue;
+ }
+ table td {
+     border: 1px solid grey;
+ }
+</style>
+
+{% endblock css %}
+
+
+{% block script %}
+<script type="text/javascript">
+ function hello(){
+     alert("hello");
+ }
+
+</script>
+{% endblock script %}
+
+{% block body %}
+
+<table>
+    <tr>
+        <th>Id</th>
+        <th>File Name</th>
+        <th>File Hash</th>
+        <th>Entries</th>
+    </tr>
+{% for entry in all_files %}
+    <tr>
+        <td>{{ entry.id }}</td>
+        <td>{{ entry.name }}</td>
+        <td>{{ entry.hash }}</td>
+        <td><a href="/summaryFile/{{entry.id}}">{{ entry.entries.all() | length }} entries</a></td>
+    </tr>
+{% endfor %}
+</table>
+
+{% endblock body %}

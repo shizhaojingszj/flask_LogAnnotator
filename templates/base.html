@@ -1,0 +1,21 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=8">
+    <title>{{title}}</title>
+    {% block css %}
+    {% endblock css %}
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script> <!-- microsoft jquery cdn -->
+    {% block script %}
+    {% endblock script %}
+
+  </head>
+  <body>
+    {% block body %}
+    <b>Base content</b>
+    {% endblock body %}
+  </body>
+</html>
+

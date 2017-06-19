@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block css %}
+
+<style>
+ table {
+     border: 2px solid lightblue;
+ }
+ table td {
+     border: 1px solid grey;
+ }
+</style>
+
+{% endblock css %}
+
+
+{% block script %}
+<script type="text/javascript">
+ function updateAnnotate(id){
+     $.ajax({
+         url: '/updateAnnotate/' + id + "/", /* otherwise, 500 error */
+         data: $("form#annotate_" + id).serialize(), /* form */
+         type: "POST",
+     });
+ }
+</script>
+{% endblock script %}
+
+{% block body %}
+
+<p>File name: <b>{{ filename }}</b></p>
+<p>File Id: <b>{{ fileid }}</b></p>
+<table>
+    <tr>
+        <th>Id</th>
+        <th>Line Number</th>
+        <th>Time Stamp</th>
+        <th>Body</th>
+        <th>Annotate</th>
+        <th>LogFile Id</th>
+    </tr>
+    {% for entry in all_entries %}
+    <tr>
+        <td name="id">{{ entry.id }}</td>
+        <td>{{ entry.line_num }}</td>
+        <td>{{ entry.timestamp }}</td>
+        <td>{{ entry.body }}</td>
+        <td>
+            <form id="annotate_{{ entry.id }}" action="javascript:updateAnnotate({{ entry.id }})" method="POST">
+                <textarea name="annotate">{{ entry.annotate }}</textarea>
+                <input type="submit" name="my-form" value="Send">
+            </form>
+        </td>
+        <td>{{ entry.logfile_id }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock body %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block css %}
+
+<style>
+
+ #add-entry {
+     border: 3px solid grey;
+     max-width: 800px;
+ }
+
+ #add-entry table {
+     width: 100%;
+ }
+
+ #add-entry td {
+     border: 3px solid brown;
+ }
+
+</style>
+
+{% endblock css %}
+
+
+{% block script %}
+
+<script type="text/javascript">
+
+ function readFile(){
+     var logfile = $("#logfile")[0];
+     console.log(logfile);
+     filename = logfile.value;
+     var rebuild_bool = $("#rebuild_bool")[0].checked ? "&rebuild=yes" : "";
+     // temporary
+     var verbose = "";
+     var addFile = $.get("/addFile?filename=" + encodeURIComponent(filename) + rebuild_bool + verbose);
+     var file_id;
+     addFile.done(function (data){
+         file_id = data['res'];
+          var link = $("div#summary_link")[0];
+         if(file_id !== ""){
+             link.innerHTML = '<a href="/summaryFile/' + file_id + '">Summary here!</a>';
+         }
+     });
+ }
+
+</script>
+
+{% endblock script %}
+
+{% block body %}
+
+<h1>Now you can open a log file to parse.</h1>
+
+<form action="javascript:readFile();">
+    <label placeholder="write your full path filename here!" for="logfile">Upload:</label>
+    <input id="logfile" type="text" style="width:100%;">
+    <label for="rebuild_bool">Rebuild?</label>
+    <input id="rebuild_bool" type="checkbox">
+    <input type="submit">
+</form>
+
+<div id='summary_link'></div>
+
+{% endblock body %}
