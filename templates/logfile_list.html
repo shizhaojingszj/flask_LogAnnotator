@@ -33,7 +33,7 @@
         <th>Entries</th>
     </tr>
 {% for entry in all_files %}
-    <tr>
+    <tr id="{{ entry.id }}">
         <td>{{ entry.id }}</td>
         <td>{{ entry.name }}</td>
         <td>{{ entry.hash }}</td>

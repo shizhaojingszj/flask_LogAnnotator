@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
 from flask import (render_template, jsonify, request)
 from app import app, db
 
 from models import (LogFile, LogEntry)
 
-import os, re, datetime
+import os, re, datetime, shlex, copy
+from io import StringIO
 import hashlib
+
+from functools import partial
 
 @app.route('/')
 def homepage():
@@ -31,7 +36,93 @@ def summaryFile(logfile_id):
                            title="ALL entries for file %s" % this_file.name,
                            all_entries = all_entries,
                            filename = this_file.name,
-                           fileid = logfile_id)
+                           fileid = logfile_id,
+                           body_colorizer = dispatch_colorize_body)
+
+def beautiful_shell(line):
+    items = shlex.split(line)
+    text = StringIO()
+    appendix = u' \\'
+    prefix = u'\t'
+    if len(items) <= 2:
+        return u" ".join(items)
+    else:
+        print(u" ".join(items[:2]) + appendix, file=text)
+    temp = []
+    olditems = copy.deepcopy(items[2:])
+    for n, item in enumerate(items[2:]):
+        if n == len(olditems) - 1:
+            if len(temp) == 0:
+                print(prefix+item, file=text)
+            else:
+                temp.append(item)
+                print(prefix+"".join(temp), file=text)
+            break
+        if item.startswith("-"):
+            if olditems[n+1].startswith("-"):
+                print(prefix+item+appendix, file=text)
+                temp = []
+                continue
+            else:
+                temp.append(item)
+        else:
+            if len(temp) > 0:
+                temp.append(item)
+                print(prefix+" ".join(temp)+appendix, file=text)
+                temp = []
+            else:
+                print(prefix+item+appendix, file=text)
+
+    return '<pre><code class="bash">{}</code></pre>'.format(text.getvalue())
+
+
+SECTION_PAT = re.compile("# \[(?P<section_name>[A-Z]+)\]")
+DELETE_PAT = re.compile("(rm( -\w+)?|unlink) (?P<path>/[\w./*]+)")
+TOUCH_PAT = re.compile("touch (?P<path>/[\w./*]+)")
+OK_PAT = re.compile(".*(?P<is_good>.ok)$")
+SUCCESS_PAT = re.compile(".*(?P<is_good>.success|.final)$")
+RUN_PAT = re.compile(".*(?P<is_run>.run)$")
+LN_PAT = re.compile("(ln) (?P<path>/[\w./*]+)")
+def dispatch_colorize_body(thing):
+    thing = thing.strip()
+    ### header
+    if SECTION_PAT.match(thing):
+        return '<b style="color:blue;">{}</b>'.format(thing)
+    ### delete a file
+    m = DELETE_PAT.match(thing)
+    if m:
+        m2 = OK_PAT.match(m.groupdict()['path'])
+        if m2:
+            return '<span class="rm">{}<span style="color:green">' \
+                '{}</span></span>'.format(thing[:-len(m2.groupdict()['is_good'])],
+                                          thing[-len(m2.groupdict()['is_good']):])  # green indicates an ok
+        m3 = RUN_PAT.match(m.groupdict()['path'])
+        if m3:
+            return '<span class="rm">{}<span style="color:cyan">' \
+                '{}</span></span>'.format(thing[:-len(m3.groupdict()['is_run'])],
+                                          thing[-len(m3.groupdict()['is_run']):])  # cyan indicates an intermediate file
+        return '<span class="rm">{}</span>'.format(thing)  # red indicates an deletion
+    ### create a file
+    m = TOUCH_PAT.match(thing)
+    if m:
+        m2 = SUCCESS_PAT.match(m.groupdict()['path'])
+        if m2:
+            return '<span class="touch">{}<span style="color:green;">' \
+                '{}</span></span>'.format(thing[:-len(m2.groupdict()['is_good'])],
+                                          thing[-len(m2.groupdict()['is_good']):]) # green indicates a final
+        m3 = RUN_PAT.match(m.groupdict()['path'])
+        if m3:
+            return '<span class="rm">{}<span style="color:cyan">' \
+                '{}</span></span>'.format(thing[:-len(m3.groupdict()['is_run'])],
+                                          thing[-len(m3.groupdict()['is_run']):])  # cyan indicates an intermediate file
+        return '<span class="touch">{}</span>'.format(thing)
+    ### hardlink a file (rename a file)
+    m = LN_PAT.match(thing)
+    if m:
+        return '<span class="ln">{}</span>'.format(thing)
+    ## use shlex to parse the line
+    thing = beautiful_shell(thing)
+    return thing
 
 @app.route("/summaryFile/all")
 def summaryFileAll():

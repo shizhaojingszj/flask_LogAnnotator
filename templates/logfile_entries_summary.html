@@ -3,26 +3,91 @@
 {% block css %}
 
 <style>
+ /* table-layout should be fixed */
  table {
      border: 2px solid lightblue;
+     table-layout: fixed;
+     width: 1600px;
  }
- table td {
+ table > tbody > tr > td {
      border: 1px solid grey;
  }
+
+ /* new layout for Annotate's textarea */
+ table textarea {
+     width: 100%;
+     box-sizing: border-box;
+ }
+
+ /* special style for body column */
+ td span.touch {
+     color: rgb(244,128,36);
+ }
+
+ td span.rm {
+     color: red;
+ }
+
+ td span.ln {
+     color: rgb(110,145,175);
+ }
+
+ /* all the column width */
+ col#c1, col#c2 {
+     width: 4%;
+ }
+ col#c3 {
+     width: 6%;
+ }
+ col#c4 {
+     width: 60%;
+ }
+ col#c5 {
+     width: 26%;
+ }
+ col#c6 {
+     width: 4%;
+ }
+
 </style>
 
 {% endblock css %}
 
 
 {% block script %}
+<!-- highlight.js -->
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
 <script type="text/javascript">
  function updateAnnotate(id){
      $.ajax({
          url: '/updateAnnotate/' + id + "/", /* otherwise, 500 error */
          data: $("form#annotate_" + id).serialize(), /* form */
          type: "POST",
+         success: function(){
+             automaticResizeTextarea(id);
+         }
      });
  }
+
+ function automaticResizeTextarea(id){
+     var ta = $("form#annotate_" + id + " textarea")[0];
+     var lineNumber = ta.value.split("\n").length;
+     lineNumber = Math.max(lineNumber, ta.value.length/40);
+     ta.setAttribute("style", "height: " + lineNumber * 32 + "px;");
+ }
+
+ /* now all the things */
+ $(document).ready(function (){
+     var all_ids = $("table#tbl-summary tr td:nth-child(1)");
+     all_ids.toArray().forEach(function(x) {
+         automaticResizeTextarea(x.textContent);
+     });
+ });
 </script>
 {% endblock script %}
 
@@ -30,7 +95,15 @@
 
 <p>File name: <b>{{ filename }}</b></p>
 <p>File Id: <b>{{ fileid }}</b></p>
-<table>
+<table id="tbl-summary">
+    <colgroup>
+        <col id="c1">
+        <col id="c2">
+        <col id="c3">
+        <col id="c4">
+        <col id="c5">
+        <col id="c6">
+    </colgroup>
     <tr>
         <th>Id</th>
         <th>Line Number</th>
@@ -41,17 +114,17 @@
     </tr>
     {% for entry in all_entries %}
     <tr>
-        <td name="id">{{ entry.id }}</td>
-        <td>{{ entry.line_num }}</td>
+        <td>{{ entry.id }}</td>
+        <td id="{{ entry.line_num }}">#{{ entry.line_num }}</td>
         <td>{{ entry.timestamp }}</td>
-        <td>{{ entry.body }}</td>
+        <td>{{ body_colorizer(entry.body) | safe }}</td>
         <td>
             <form id="annotate_{{ entry.id }}" action="javascript:updateAnnotate({{ entry.id }})" method="POST">
-                <textarea name="annotate">{{ entry.annotate }}</textarea>
-                <input type="submit" name="my-form" value="Send">
+                <textarea name="annotate">{{ entry.annotate }}</textarea><br>
+                <input type="submit" name="my-form" value="OK">
             </form>
         </td>
-        <td>{{ entry.logfile_id }}</td>
+        <td><a href="/summaryFile/all#{{ entry.logfile_id }}">{{ entry.logfile_id }}</a></td>
     </tr>
     {% endfor %}
 </table>
