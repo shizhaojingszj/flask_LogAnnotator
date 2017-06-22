@@ -4,7 +4,7 @@
 
 <style>
  /* table-layout should be fixed */
- table {
+ table#tbl-summary {
      border: 2px solid lightblue;
      table-layout: fixed;
      width: 1600px;
@@ -49,6 +49,22 @@
      width: 4%;
  }
 
+ /* some <a> should not change color */
+ a#no-visited-color, a#no-visited-color:link, a#no-visited-color:visited {
+     text-decoration: none;
+     decoration: none;
+     /*      underline: none; */
+     color: black;
+ }
+ a#no-visited-color:hover {
+     color: red;
+ }
+
+ /* form */
+ form.has-annotate {
+     border: 1px solid blue;
+ }
+
 </style>
 
 {% endblock css %}
@@ -70,31 +86,101 @@
          type: "POST",
          success: function(){
              automaticResizeTextarea(id);
+             summaryAnnotation();
          }
      });
  }
 
+ function findNextAnnotation(id){
+     updateAnnotate(id);
+     // nth-child(2)
+     var rows = $("table#tbl-summary tr");
+     var this_linenum = 0; /* maybe null is better? */
+     for(var i=1 /* because the header */ ; i < rows.length; i++){
+         var row = rows[i];
+         var all_td = $(row).find("td");
+         var td_linenum = all_td[1].textContent.substr(1);
+         var td_ann = all_td[4]; /* annotation column */
+         var form_id = $(td_ann).find("form")[0].id.replace(/^annotate_/, "");
+         if (form_id == id){
+             this_linenum = td_linenum;
+         }
+         if (!this_linenum || td_linenum <= this_linenum) {
+             continue;
+         }
+         if (td_ann.textContent.trim() !== ""){
+             window.location.href = window.location.origin + window.location.pathname + "#" + td_linenum
+             return;
+         }
+     }
+ }
+
  function automaticResizeTextarea(id){
      var ta = $("form#annotate_" + id + " textarea")[0];
+     if(ta.value.trim() !== ""){
+         $("form#annotate_" + id)[0].setAttribute("class", "has-annotate");
+     }else{
+         $("form#annotate_" + id)[0].setAttribute("class", "");
+     }
      var lineNumber = ta.value.split("\n").length;
      lineNumber = Math.max(lineNumber, ta.value.length/40);
      ta.setAttribute("style", "height: " + lineNumber * 32 + "px;");
  }
 
+ function summaryAnnotation(){
+     var ta = $("form textarea[name=annotate]");
+     var totalNumber = ta.length;
+     var hasAnnotate = 0;
+     for(var i=0; i < totalNumber; i++){
+         var this_ta = ta[i];
+         if(this_ta.value !== ""){
+             hasAnnotate += 1;
+         }
+     }
+     var summaryDiv = $("div#summary-annotation")[0];
+     summaryDiv.innerHTML = "<p>There are <b>" + hasAnnotate + " / " + totalNumber + "</b> entries have Annotation.</p>"
+ }
+
  /* now all the things */
  $(document).ready(function (){
+     // expand textarea webkit
      var all_ids = $("table#tbl-summary tr td:nth-child(1)");
      all_ids.toArray().forEach(function(x) {
          automaticResizeTextarea(x.textContent);
      });
+
+     // summary annotation
+     summaryAnnotation();
  });
 </script>
 {% endblock script %}
 
 {% block body %}
 
-<p>File name: <b>{{ filename }}</b></p>
+<p id="top">File name: <b>{{ filename }}</b></p>
 <p>File Id: <b>{{ fileid }}</b></p>
+
+<p>There are <b>{{ pipelines | length }}</b> PIPELINE runs.</p>
+<ol>
+    {% for pipeline in pipelines %}
+    <li><a href="#{{ pipeline.line_num }}">#{{ pipeline.line_num }}</a></li>
+    {% endfor %}
+</ol>
+
+
+<p>All sections are listed below.</p>
+<table>
+    {% for section, count, value in sections %}
+    <tr>
+        <td>{{ body_colorizer(section) | safe }}</td>
+        <td>{{ count }}</td>
+        <td>{{ value | safe }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div id="summary-annotation"></div>
+
 <table id="tbl-summary">
     <colgroup>
         <col id="c1">
@@ -114,14 +200,15 @@
     </tr>
     {% for entry in all_entries %}
     <tr>
-        <td>{{ entry.id }}</td>
+        <td><a href="#top" id="no-visited-color" title="go to TOP">{{ entry.id }}</a></td>
         <td id="{{ entry.line_num }}">#{{ entry.line_num }}</td>
         <td>{{ entry.timestamp }}</td>
         <td>{{ body_colorizer(entry.body) | safe }}</td>
         <td>
-            <form id="annotate_{{ entry.id }}" action="javascript:updateAnnotate({{ entry.id }})" method="POST">
+            <form id="annotate_{{ entry.id }}" action="javascript:void(0)" {% if entry.annotate %}class="has-annotate"{% endif -%} onsubmit="updateAnnotate({{ entry.id }})" method="POST">
                 <textarea name="annotate">{{ entry.annotate }}</textarea><br>
                 <input type="submit" name="my-form" value="OK">
+                <input type="submit" name="next-annotation" formaction="javascript:findNextAnnotation({{ entry.id }})" value="Next Annotation">
             </form>
         </td>
         <td><a href="/summaryFile/all#{{ entry.logfile_id }}">{{ entry.logfile_id }}</a></td>

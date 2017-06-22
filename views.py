@@ -9,6 +9,7 @@ from models import (LogFile, LogEntry)
 import os, re, datetime, shlex, copy
 from io import StringIO
 import hashlib
+from collections import OrderedDict
 
 from functools import partial
 
@@ -26,18 +27,6 @@ def updateAnnotate(entry_id):
     this_entry.annotate = annotate
     db.session.commit()
     return ""
-
-@app.route("/summaryFile/<int:logfile_id>")
-def summaryFile(logfile_id):
-    this_file = LogFile.query.get(logfile_id)
-    all_entries = this_file.entries
-
-    return render_template("logfile_entries_summary.html",
-                           title="ALL entries for file %s" % this_file.name,
-                           all_entries = all_entries,
-                           filename = this_file.name,
-                           fileid = logfile_id,
-                           body_colorizer = dispatch_colorize_body)
 
 def beautiful_shell(line):
     items = shlex.split(line)
@@ -73,8 +62,9 @@ def beautiful_shell(line):
             else:
                 print(prefix+item+appendix, file=text)
 
-    return '<pre><code class="bash">{}</code></pre>'.format(text.getvalue())
-
+    ## turn off hljs
+    # return '<pre><code class="bash">{}</code></pre>'.format(text.getvalue())
+    return '{}'.format(text.getvalue())
 
 SECTION_PAT = re.compile("# \[(?P<section_name>[A-Z]+)\]")
 DELETE_PAT = re.compile("(rm( -\w+)?|unlink) (?P<path>/[\w./*]+)")
@@ -123,6 +113,33 @@ def dispatch_colorize_body(thing):
     ## use shlex to parse the line
     thing = beautiful_shell(thing)
     return thing
+
+def get_all_sections(entries):
+    result = OrderedDict()
+    for entry in entries:
+        body = entry.body.strip()
+        if SECTION_PAT.match(body):
+            if body not in result:
+                result[body] = ['<a href="#{}">#{}</a>'.format(entry.line_num, entry.line_num)]
+            else:
+                result[body].append('<a href="#{}">#{}</a>'.format(entry.line_num, entry.line_num))
+    return [(key, len(value), " ".join(value)) for (key, value) in result.items()]
+
+
+@app.route("/summaryFile/<int:logfile_id>")
+def summaryFile(logfile_id):
+    this_file = LogFile.query.get(logfile_id)
+    all_entries = this_file.entries
+
+    return render_template("logfile_entries_summary.html",
+                           title="ALL entries for file %s" % this_file.name,
+                           all_entries = all_entries,
+                           pipelines = [x for x in all_entries if x.body == "# [RUNPIPELINE]"],
+                           sections = get_all_sections(all_entries),
+                           filename = this_file.name,
+                           fileid = logfile_id,
+                           body_colorizer = dispatch_colorize_body)
+
 
 @app.route("/summaryFile/all")
 def summaryFileAll():
