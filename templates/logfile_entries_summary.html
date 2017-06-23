@@ -91,13 +91,13 @@
      });
  }
 
+
  function findNextAnnotation(id){
      updateAnnotate(id);
      // nth-child(2)
-     var rows = $("table#tbl-summary tr");
      var this_linenum = 0; /* maybe null is better? */
-     for(var i=1 /* because the header */ ; i < rows.length; i++){
-         var row = rows[i];
+     for(var i=1 /* because the header */ ; i < ROWS.length; i++){
+         var row = ROWS[i];
          var all_td = $(row).find("td");
          var td_linenum = all_td[1].textContent.substr(1);
          var td_ann = all_td[4]; /* annotation column */
@@ -109,7 +109,7 @@
              continue;
          }
          if (td_ann.textContent.trim() !== ""){
-             window.location.href = window.location.origin + window.location.pathname + "#" + td_linenum
+             window.location.replace(window.location.origin + window.location.pathname + "#" + td_linenum)
              return;
          }
      }
@@ -151,6 +151,9 @@
 
      // summary annotation
      summaryAnnotation();
+
+     // global variable
+     window.ROWS = $("table#tbl-summary tr");
  });
 </script>
 {% endblock script %}

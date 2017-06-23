@@ -45,7 +45,7 @@ def beautiful_shell(line):
                 print(prefix+item, file=text)
             else:
                 temp.append(item)
-                print(prefix+"".join(temp), file=text)
+                print(prefix+" ".join(temp), file=text)
             break
         if item.startswith("-"):
             if olditems[n+1].startswith("-"):
@@ -62,9 +62,7 @@ def beautiful_shell(line):
             else:
                 print(prefix+item+appendix, file=text)
 
-    ## turn off hljs
-    # return '<pre><code class="bash">{}</code></pre>'.format(text.getvalue())
-    return '{}'.format(text.getvalue())
+    return '<pre><code class="bash">{}</code></pre>'.format(text.getvalue())
 
 SECTION_PAT = re.compile("# \[(?P<section_name>[A-Z]+)\]")
 DELETE_PAT = re.compile("(rm( -\w+)?|unlink) (?P<path>/[\w./*]+)")

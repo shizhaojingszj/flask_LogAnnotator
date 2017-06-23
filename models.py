@@ -2,14 +2,20 @@
 
 import datetime, re
 
-from app import db # app is just a namespace, db is a SQLAlchemy obj
+from app import app, db # app is just a namespace, db is a SQLAlchemy obj
+from flask_script import Manager
+from flask_migrate import (Migrate, MigrateCommand)
 
+manager = Manager(app)
+migrate = Migrate(app, db)      # this is how to create a migrate
+manager.add_command('db', MigrateCommand)
 
 class LogFile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200))
     hash = db.Column(db.String(100), unique=True)
     entries = db.relationship("LogEntry", backref="logfile", lazy="dynamic")  # One-To-Many
+    comment = db.Column(db.String(300))
 
 ## Now create a ORMer
 class LogEntry(db.Model):          # Model is an attribute for SQLAlchemy obj, and still a class
@@ -26,3 +32,6 @@ class LogEntry(db.Model):          # Model is an attribute for SQLAlchemy obj, a
 
     def __repr__(self):
         return '<LogEntry in Line %s from File id %s>' % (self.line_num, self.logfile_id)
+
+if __name__ == '__main__':
+    manager.run()
